@@ -41,9 +41,7 @@ def make_maze(w = 16, h = 8, print_progress=False):
     e = vertical[end[1]][end[0]]
     vertical[end[1]][end[0]] = "{}{}{}".format(e[0], END, e[2])
     
-    # generate maze string
     return get_maze_string(vertical, horizontal)
-
 
 def generate_boundaries(w, h):
     """
@@ -59,7 +57,6 @@ def generate_grid(w, h):
     horizontal (corners and ceilings). The initial state of each cell is
     completely blocked from all sides.
     """
-    # generate full grid, extra column for right edge, extra row for bottom edge
     vertical   = [[get_grid_part(part=WALL)]*w + [WALL] for i in range(h)] + [[]]
     horizontal = [[get_grid_part()]*w + [CORNER] for i in range(h + 1)]
 
@@ -117,7 +114,7 @@ def dfs(vertical, horizontal, visited, start, end, print_progress):
     """
     Iterative DFS to avoid hitting maximum recursion stack depth.
     The DFS carves out the path of every adjacent neighbor we pass through.
-    The stack contains sets of (prev_x, prev_y, x, y) so we can determine which
+    The stack contains tuples of (prev_x, prev_y, x, y) so we can determine which
     direction we came from for each iteration, in order to path through the
     appropriate wall/ceiling.
     print_progress allows us to print (in place) the progress of the DFS/maze pathing
@@ -149,9 +146,7 @@ def dfs(vertical, horizontal, visited, start, end, print_progress):
                 time.sleep(0.0025)
 
             # add unvisited neighbors
-            for next_x, next_y in get_neighbors(x, y):
-                if not visited[next_y][next_x]:
-                    stack.append((x, y, next_x, next_y))
+            stack.extend([(x, y, next_x, next_y) for next_x, next_y in get_neighbors(x, y) if not visited[next_y][next_x]])
 
 def get_neighbors(x, y):
     """
