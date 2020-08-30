@@ -1,6 +1,8 @@
 # Maze generator
 A python-based maze generator which uses a DFS to randomly generate paths in the maze
 
+![](example_run.gif)
+
 # TODO
 - Proper project structure
 - Arg parsing
