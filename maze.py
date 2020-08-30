@@ -27,13 +27,10 @@ def make_maze(w = 16, h = 8, print_progress=False):
     if w < 2 or h < 2:
         raise ValueError("maze dimension too small")
 
-    visited = generate_boundaries(w, h)
-    vertical, horizontal = generate_grid(w, h)
-
     start, end = get_distant_points(w, h)
 
     # DFS to "carve" out the maze randomly
-    dfs(vertical, horizontal, visited, start, end, print_progress)
+    vertical, horizontal = dfs(*generate_grid(w, h), start, end, print_progress)
 
     # mark start and end positions
     s = vertical[start[1]][start[0]]
@@ -43,24 +40,19 @@ def make_maze(w = 16, h = 8, print_progress=False):
     
     return get_maze_string(vertical, horizontal)
 
-def generate_boundaries(w, h):
-    """
-    Generated visited matrix where all grid points are marked as unvisited.
-    Create extra row to the right, and bottom and mark as visited to act as
-    boundaries prevents the DFS from wrapping around the grid.
-    """
-    return [[0]*w + [1] for _ in range(h)] + [[1] * (w + 1)]
-
 def generate_grid(w, h):
     """
     Generate the full grid, split into vertical (walls and spaces), and
     horizontal (corners and ceilings). The initial state of each cell is
     completely blocked from all sides.
+    Also, generate visited matrix where all grid points are marked as unvisited.
+    Create extra row to the right, and bottom and mark as visited to act as
+    boundaries prevents the DFS from wrapping around the grid.
     """
     vertical   = [[get_grid_part(part=WALL)]*w + [WALL] for i in range(h)] + [[]]
     horizontal = [[get_grid_part()]*w + [CORNER] for i in range(h + 1)]
-
-    return vertical, horizontal
+    visited    = [[0]*w + [1] for _ in range(h)] + [[1] * (w + 1)]
+    return vertical, horizontal, visited
 
 def get_grid_part(part=CORNER, path=False):
     """
@@ -147,6 +139,8 @@ def dfs(vertical, horizontal, visited, start, end, print_progress):
 
             # add unvisited neighbors
             stack.extend([(x, y, next_x, next_y) for next_x, next_y in get_neighbors(x, y) if not visited[next_y][next_x]])
+
+    return vertical, horizontal
 
 def get_neighbors(x, y):
     """
