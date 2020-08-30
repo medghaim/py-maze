@@ -7,7 +7,7 @@ from blessings import Terminal
 
 # blessings Terminal
 term = Terminal()
-
+print(term.clear)
 # grid parts
 CORNER = "+"
 WALL = "|"
@@ -30,7 +30,7 @@ def make_maze(w = 16, h = 8, print_progress=False):
     start, end = get_distant_points(w, h)
 
     # DFS to "carve" out the maze randomly
-    vertical, horizontal = dfs(*generate_grid(w, h), start, end, print_progress)
+    vertical, horizontal = dfs(*generate_grid(w, h), generate_visited(w, h), start, end, print_progress)
 
     # mark start and end positions
     s = vertical[start[1]][start[0]]
@@ -38,21 +38,27 @@ def make_maze(w = 16, h = 8, print_progress=False):
     e = vertical[end[1]][end[0]]
     vertical[end[1]][end[0]] = "{}{}{}".format(e[0], END, e[2])
     
+    vertical, horizontal = bfs_solve(vertical, horizontal, generate_visited(w, h), start, end, print_progress)
+
     return get_maze_string(vertical, horizontal)
+
+def generate_visited(w, h):
+    """
+    Generate visited matrix where all grid points are marked as unvisited.
+    Create extra row to the right, and bottom and mark as visited to act as
+    boundaries prevents the DFS from wrapping around the grid.
+    """
+    return [[0]*w + [1] for _ in range(h)] + [[1] * (w + 1)]
 
 def generate_grid(w, h):
     """
     Generate the full grid, split into vertical (walls and spaces), and
     horizontal (corners and ceilings). The initial state of each cell is
     completely blocked from all sides.
-    Also, generate visited matrix where all grid points are marked as unvisited.
-    Create extra row to the right, and bottom and mark as visited to act as
-    boundaries prevents the DFS from wrapping around the grid.
     """
     vertical   = [[get_grid_part(part=WALL)]*w + [WALL] for i in range(h)] + [[]]
     horizontal = [[get_grid_part()]*w + [CORNER] for i in range(h + 1)]
-    visited    = [[0]*w + [1] for _ in range(h)] + [[1] * (w + 1)]
-    return vertical, horizontal, visited
+    return vertical, horizontal
 
 def get_grid_part(part=CORNER, path=False):
     """
@@ -104,11 +110,11 @@ def get_distance(x, y):
 
 def dfs(vertical, horizontal, visited, start, end, print_progress):
     """
-    Iterative DFS to avoid hitting maximum recursion stack depth.
-    The DFS carves out the path of every adjacent neighbor we pass through.
-    The stack contains tuples of (prev_x, prev_y, x, y) so we can determine which
-    direction we came from for each iteration, in order to path through the
-    appropriate wall/ceiling.
+    Iterative DFS to avoid hitting maximum recursion stack depth for large
+    grids. The DFS carves out the path of every adjacent neighbor we pass
+    through. The stack contains tuples of (prev_x, prev_y, x, y) so we can
+    determine which direction we came from for each iteration, in order to path
+    through the appropriate wall/ceiling.
     print_progress allows us to print (in place) the progress of the DFS/maze pathing
     every iteration.
     """
@@ -142,6 +148,43 @@ def dfs(vertical, horizontal, visited, start, end, print_progress):
 
     return vertical, horizontal
 
+# TODO:
+# 1. when we find correct path, remove all incorrect paths
+def bfs_solve(vertical, horizontal, visited, start, end, print_progress):
+    queue = deque([(start[0], start[1], adj[0], adj[1]) for adj in get_neighbors(start[0], start[1])])
+    visited[start[1]][start[0]] = 1
+
+    while queue:
+        prev_x, prev_y, x, y = queue.popleft()
+
+
+        if not visited[y][x] and is_passable([prev_x, prev_y], [x, y], vertical, horizontal):
+            # we're done if we hit end!
+            if [x, y] == end:
+                break
+
+            visited[y][x] = 1
+
+            # mark path
+            v = vertical[y][x]
+            vertical[y][x] = "{}{}{}".format(v[0], term.red + 'o' + term.normal, v[2])
+
+            if print_progress:
+                with term.hidden_cursor():
+                    with term.location(0, 1):
+                        print(get_maze_string(vertical, horizontal))
+                time.sleep(0.01)
+
+            queue.extend([(x, y, next_x, next_y) for next_x, next_y in get_neighbors(x, y) if not visited[next_y][next_x]])
+
+    return vertical, horizontal
+
+def is_passable(source, dest, vertical, horizontal):
+    if source[0] == dest[0]:
+        return horizontal[max(source[1], dest[1])][source[0]] == get_grid_part(path=True)
+    elif source[1] == dest[1]:
+        return vertical[source[1]][max(source[0], dest[0])][0] != WALL
+
 def get_neighbors(x, y):
     """
     Given an [x,y] point on the grid, return a list of the adjacent neighbors.
@@ -163,4 +206,4 @@ def get_maze_string(vertical, horizontal):
     return maze[:-1]
 
 if __name__ == '__main__':
-    print(make_maze(70,40, print_progress=True))
+    print(make_maze(35,20, print_progress=True))
