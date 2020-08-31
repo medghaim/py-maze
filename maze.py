@@ -154,28 +154,41 @@ def bfs_solve(vertical, horizontal, visited, start, end, print_progress):
     queue = deque([(start[0], start[1], adj[0], adj[1]) for adj in get_neighbors(start[0], start[1])])
     visited[start[1]][start[0]] = 1
 
+    parents = {(start[0], start[1]): None}
+
+    # BFS while keeping track of parents
     while queue:
         prev_x, prev_y, x, y = queue.popleft()
 
-
         if not visited[y][x] and is_passable([prev_x, prev_y], [x, y], vertical, horizontal):
+            visited[y][x] = 1
+            parents[(x,y)] = (prev_x, prev_y)
+
             # we're done if we hit end!
             if [x, y] == end:
                 break
 
-            visited[y][x] = 1
-
-            # mark path
-            v = vertical[y][x]
-            vertical[y][x] = "{}{}{}".format(v[0], term.red + 'o' + term.normal, v[2])
-
-            if print_progress:
-                with term.hidden_cursor():
-                    with term.location(0, 1):
-                        print(get_maze_string(vertical, horizontal))
-                time.sleep(0.01)
-
             queue.extend([(x, y, next_x, next_y) for next_x, next_y in get_neighbors(x, y) if not visited[next_y][next_x]])
+
+    # get list of parents from end -> start
+    path = []
+    parent = parents[(end[0], end[1])]
+    while parent:
+        path.append(parent)
+        parent = parents[parent]
+
+    # reverse path list (ie, start -> end), and mark it
+    path = path[::-1][1:]
+    for x, y in path:
+        # mark path
+        v = vertical[y][x]
+        vertical[y][x] = "{}{}{}".format(v[0], term.red + 'o' + term.normal, v[2])
+
+        if print_progress:
+            with term.hidden_cursor():
+                with term.location(0, 1):
+                    print(get_maze_string(vertical, horizontal))
+            time.sleep(0.01)
 
     return vertical, horizontal
 
